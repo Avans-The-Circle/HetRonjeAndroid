@@ -1,5 +1,8 @@
 package com.example.hetrondjeandroid;
 
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.hardware.Camera;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -43,5 +46,6 @@ public class FirstFragment extends Fragment {
         super.onDestroyView();
         binding = null;
     }
+
 
 }
