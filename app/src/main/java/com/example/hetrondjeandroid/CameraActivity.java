@@ -24,55 +24,55 @@ public class CameraActivity extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+//        setContentView(R.layout.activity_main);
+//
+//        // Create an instance of Camera
+//        mCamera = getCameraInstance();
+//        Camera.Parameters params = mCamera.getParameters();
+//        params.setFocusMode(Camera.Parameters.FOCUS_MODE_FIXED);
+//        mCamera.setParameters(params);
+//        Log.d("Test",mCamera.toString());
+//        // Create our Preview view and set it as the content of our activity.
+//        mPreview = new CameraPreview(this, mCamera);
+//        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
+//        preview.addView(mPreview);
 
-        // Create an instance of Camera
-        mCamera = getCameraInstance();
-        Camera.Parameters params = mCamera.getParameters();
-        params.setFocusMode(Camera.Parameters.FOCUS_MODE_FIXED);
-        mCamera.setParameters(params);
-        Log.d("Test",mCamera.toString());
-        // Create our Preview view and set it as the content of our activity.
-        mPreview = new CameraPreview(this, mCamera);
-        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
-        preview.addView(mPreview);
-
-
-        // Add a listener to the Capture button
-        Button captureButton = (Button) findViewById(R.id.button_capture);
-        captureButton.setOnClickListener(
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        if (isRecording) {
-                            // stop recording and release camera
-                            mediaRecorder.stop();  // stop the recording
-                            releaseMediaRecorder(); // release the MediaRecorder object
-                            mCamera.lock();         // take camera access back from MediaRecorder
-
-                            // inform the user that recording has stopped
-                            captureButton.setText("Start");
-                            isRecording = false;
-                        } else {
-                            // initialize video camera
-                            if (prepareVideoRecorder()) {
-                                // Camera is available and unlocked, MediaRecorder is prepared,
-                                // now you can start recording
-                                mediaRecorder.start();
-
-                                // inform the user that recording has started
-                                captureButton.setText("Stop");
-                                isRecording = true;
-                            } else {
-                                // prepare didn't work, release the camera
-                                releaseMediaRecorder();
-                                // inform user
-                            }
-                        }
-                    }
-                }
-        );
-
+//
+//        // Add a listener to the Capture button
+//        Button captureButton = (Button) findViewById(R.id.button_capture);
+//        captureButton.setOnClickListener(
+//                new View.OnClickListener() {
+//                    @Override
+//                    public void onClick(View v) {
+//                        if (isRecording) {
+//                            // stop recording and release camera
+//                            mediaRecorder.stop();  // stop the recording
+//                            releaseMediaRecorder(); // release the MediaRecorder object
+//                            mCamera.lock();         // take camera access back from MediaRecorder
+//
+//                            // inform the user that recording has stopped
+//                            captureButton.setText("Start");
+//                            isRecording = false;
+//                        } else {
+//                            // initialize video camera
+//                            if (prepareVideoRecorder()) {
+//                                // Camera is available and unlocked, MediaRecorder is prepared,
+//                                // now you can start recording
+//                                mediaRecorder.start();
+//
+//                                // inform the user that recording has started
+//                                captureButton.setText("Stop");
+//                                isRecording = true;
+//                            } else {
+//                                // prepare didn't work, release the camera
+//                                releaseMediaRecorder();
+//                                // inform user
+//                            }
+//                        }
+//                    }
+//                }
+//        );
+//
     }
     private boolean prepareVideoRecorder(){
 
