@@ -4,6 +4,7 @@ import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
@@ -18,6 +19,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Environment;
 import android.util.Log;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 
 import androidx.core.app.ActivityCompat;
@@ -27,19 +30,26 @@ import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
 import com.example.hetrondjeandroid.databinding.ActivityMainBinding;
+import com.pedro.encoder.input.video.CameraOpenException;
+import com.pedro.rtmp.utils.ConnectCheckerRtmp;
+import com.pedro.rtplibrary.rtmp.RtmpCamera1;
 
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements ConnectCheckerRtmp, View.OnClickListener, SurfaceHolder.Callback {
 
     private final String TAG = this.getClass().getSimpleName();
     private AppBarConfiguration appBarConfiguration;
@@ -54,40 +64,255 @@ public class MainActivity extends AppCompatActivity {
     public static final int MEDIA_TYPE_IMAGE = 1;
     public static final int MEDIA_TYPE_VIDEO = 2;
 
+    private Button button;
+    private Button bRecord;
+    private EditText etUrl;
+    private RtmpCamera1 rtmpCamera1;
+    private String currentDateAndTime = "";
+    private File folder;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.camera_activity);
+        setContentView(R.layout.activity_example);
 
         checkPermission();
+//        Intent intent = new Intent(this, SimpleRtmpActivity.class);
+//        startActivity(intent);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+//        folder = PathUtils.getRecordPath();
+        SurfaceView surfaceView = findViewById(R.id.surfaceView);
+        folder = new File(getOutputMediaFile(MEDIA_TYPE_VIDEO).toString());
+        button = findViewById(R.id.b_start_stop);
+        button.setOnClickListener(this);
+        bRecord = findViewById(R.id.b_record);
+        bRecord.setOnClickListener(this);
+        Button switchCamera = findViewById(R.id.switch_camera);
+        switchCamera.setOnClickListener(this);
+        etUrl = findViewById(R.id.et_rtp_url);
+        etUrl.setText(R.string.hint_rtmp);
+        rtmpCamera1 = new RtmpCamera1(surfaceView, this);
+        rtmpCamera1.setReTries(10);
+        surfaceView.getHolder().addCallback(this);
 
 
         // Create an instance of Camera
-        mCamera = getCameraInstance();
-        currentCamId =  0;
-        mSwitchCamera = findViewById(R.id.button_switch);
-        mSwitchCamera.setOnClickListener(new View.OnClickListener() {
+//        mCamera = getCameraInstance();
+//        currentCamId =  0;
+//        mSwitchCamera = findViewById(R.id.button_switch);
+//        mSwitchCamera.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                switchCamera();
+//            }
+//        });
+//        //        // Add a listener to the Capture button
+//        captureButton = (Button) findViewById(R.id.button_capture);
+//        captureButton.setOnClickListener(
+//                new View.OnClickListener() {
+//                    @Override
+//                    public void onClick(View v) {
+//                        recordVideo();
+//                    }
+//                }
+//        );
+//
+//        // Create our Preview view and set it as the content of our activity.
+//        mPreview = new CameraPreview(this, mCamera);
+//        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
+//        preview.addView(mPreview);
+    }
+
+
+
+    @Override
+    public void onConnectionStartedRtmp(String rtmpUrl) {
+    }
+
+    @Override
+    public void onConnectionSuccessRtmp() {
+        runOnUiThread(new Runnable() {
             @Override
-            public void onClick(View view) {
-                switchCamera();
+            public void run() {
+                Toast.makeText(MainActivity.this, "Connection success", Toast.LENGTH_SHORT).show();
             }
         });
-        //        // Add a listener to the Capture button
-        captureButton = (Button) findViewById(R.id.button_capture);
-        captureButton.setOnClickListener(
-                new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        recordVideo();
-                    }
-                }
-        );
-
-        // Create our Preview view and set it as the content of our activity.
-        mPreview = new CameraPreview(this, mCamera);
-        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
-        preview.addView(mPreview);
     }
+
+    @Override
+    public void onConnectionFailedRtmp(final String reason) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (rtmpCamera1.reTry(5000, reason, null)) {
+                    Toast.makeText(MainActivity.this, "Retry", Toast.LENGTH_SHORT)
+                            .show();
+                } else {
+                    Toast.makeText(MainActivity.this, "Connection failed. " + reason, Toast.LENGTH_SHORT)
+                            .show();
+                    rtmpCamera1.stopStream();
+                    button.setText(R.string.start_button);
+                }
+            }
+        });
+    }
+
+    @Override
+    public void onNewBitrateRtmp(final long bitrate) {
+
+    }
+
+    @Override
+    public void onDisconnectRtmp() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "Disconnected", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    @Override
+    public void onAuthErrorRtmp() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "Auth error", Toast.LENGTH_SHORT).show();
+                rtmpCamera1.stopStream();
+                button.setText(R.string.start_button);
+            }
+        });
+    }
+
+    @Override
+    public void onAuthSuccessRtmp() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, "Auth success", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    @Override
+    public void onClick(View view) {
+        switch (view.getId()) {
+            case R.id.b_start_stop:
+                if (!rtmpCamera1.isStreaming()) {
+                    if (rtmpCamera1.isRecording()
+                            || rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo()) {
+                        button.setText(R.string.stop_button);
+                        rtmpCamera1.startStream(etUrl.getText().toString());
+                    } else {
+                        Toast.makeText(this, "Error preparing stream, This device cant do it",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    button.setText(R.string.start_button);
+                    rtmpCamera1.stopStream();
+                }
+                break;
+            case R.id.switch_camera:
+                try {
+                    rtmpCamera1.switchCamera();
+                } catch (CameraOpenException e) {
+                    Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case R.id.b_record:
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2) {
+                    if (!rtmpCamera1.isRecording()) {
+                        try {
+                            if (!folder.exists()) {
+                                folder.mkdir();
+                            }
+                            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
+                            currentDateAndTime = sdf.format(new Date());
+                            if (!rtmpCamera1.isStreaming()) {
+                                if (rtmpCamera1.prepareAudio() && rtmpCamera1.prepareVideo()) {
+                                    rtmpCamera1.startRecord(
+                                            folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
+                                    bRecord.setText(R.string.stop_record);
+                                    Toast.makeText(this, "Recording... ", Toast.LENGTH_SHORT).show();
+                                } else {
+                                    Toast.makeText(this, "Error preparing stream, This device cant do it",
+                                            Toast.LENGTH_SHORT).show();
+                                }
+                            } else {
+                                rtmpCamera1.startRecord(
+                                        folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
+                                bRecord.setText(R.string.stop_record);
+                                Toast.makeText(this, "Recording... ", Toast.LENGTH_SHORT).show();
+                            }
+                        } catch (IOException e) {
+                            rtmpCamera1.stopRecord();
+//                            PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
+                            bRecord.setText(R.string.start_record);
+                            Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                        }
+                    } else {
+                        rtmpCamera1.stopRecord();
+//                        PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
+                        bRecord.setText(R.string.start_record);
+                        Toast.makeText(this,
+                                "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(this, "You need min JELLY_BEAN_MR2(API 18) for do it...",
+                            Toast.LENGTH_SHORT).show();
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    @Override
+    public void surfaceCreated(SurfaceHolder surfaceHolder) {
+
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
+        rtmpCamera1.startPreview();
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR2 && rtmpCamera1.isRecording()) {
+            rtmpCamera1.stopRecord();
+//            PathUtils.updateGallery(this, folder.getAbsolutePath() + "/" + currentDateAndTime + ".mp4");
+            bRecord.setText(R.string.start_record);
+            Toast.makeText(this,
+                    "file " + currentDateAndTime + ".mp4 saved in " + folder.getAbsolutePath(),
+                    Toast.LENGTH_SHORT).show();
+            currentDateAndTime = "";
+        }
+        if (rtmpCamera1.isStreaming()) {
+            rtmpCamera1.stopStream();
+            button.setText(getResources().getString(R.string.start_button));
+        }
+        rtmpCamera1.stopPreview();
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
