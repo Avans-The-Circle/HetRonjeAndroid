@@ -91,7 +91,8 @@ public class MainActivity extends AppCompatActivity implements ConnectCheckerRtm
         Button switchCamera = findViewById(R.id.switch_camera);
         switchCamera.setOnClickListener(this);
         etUrl = findViewById(R.id.et_rtp_url);
-        etUrl.setText(R.string.hint_rtmp);
+        //etUrl.setText("rtmp://a.rtmp.youtube.com/live2/df48-7xqa-ujbf-fccm-d8cb");
+        etUrl.setText("rtmp://10.0.2.2:1935/live/stream");
         rtmpCamera1 = new RtmpCamera1(surfaceView, this);
         rtmpCamera1.setReTries(10);
         surfaceView.getHolder().addCallback(this);
